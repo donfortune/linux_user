@@ -107,6 +107,20 @@ while IFS=';' read -r username groups; do
     # Check if the user already exists
     if id "$username" &>/dev/null; then
         log "User $username already exists."
+        
+        # Ensure all groups exist and add user to them
+        IFS=',' read -ra group_list <<< "$groups"
+        for group in "${group_list[@]}"; do
+            if ! getent group "$group" > /dev/null; then
+                if groupadd "$group"; then
+                    log "Group $group created."
+                else
+                    log "Failed to create group $group."
+                    group_creation_failed=true
+                fi
+            fi
+            usermod -aG "$group" "$username"
+        done
         continue
     fi
 
